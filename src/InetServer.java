@@ -1,5 +1,3 @@
-package Server;
-
 import java.io.*;
 import java.net.*;
 
@@ -33,11 +31,13 @@ class Worker extends Thread{
 				printRemoteAddress(name, out);
 			}
 			catch (IOException ioe) {
+				//Print to local terminal
 				System.out.println("Server read error");
 				ioe.printStackTrace();
 			}
 		}
 		catch (IOException ioe) {
+			//failure on acquiring and reading/writing from the stream.
 			System.out.println(ioe);
 		}
 	}
@@ -84,7 +84,7 @@ public class InetServer {
 
 	public static void main (String args []) throws IOException {
 		int q_len = 6;
-		int port = 1565;
+		int port = 1570;
 		Socket sock;
 		
 		//Create a socket that listens in on a specified port.

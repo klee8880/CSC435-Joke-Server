@@ -1,5 +1,3 @@
-package Server;
-
 import java.io.*;
 import java.net.*;
 
@@ -8,13 +6,14 @@ public class InetClient {
 	public static void main (String args []) {
 		
 		String serverName;
+		int port = 1570;
 		
-		//Optionally acquire the host's name 
+		//Optionally acquire the host's name if it was provided
 		if (args.length < 1) serverName = "localhost";
 		else serverName = args[0];
 		
 		System.out.println("Clark Elliott's Inet Client, 1.8. \n");
-		System.out.println("Using server: " + serverName + ", Port: 1565");
+		System.out.println("Using server: " + serverName + ", Port: " + port);
 		
 		//Read from the local console
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -23,22 +22,25 @@ public class InetClient {
 			
 			String name;
 			
-			
 			do {
-				System.out.print("Enter a hostname or an IP address, (quit to end: ");
-				System.out.flush();
+				//Communicate with the console
+				System.out.print("Enter a hostname or an IP address, (quit) to end: ");
+				System.out.flush(); //push string to the console
 				
 				name = in.readLine();
 				
 				//Check Arguments for a quit command
 				if (name.indexOf("quit") < 0) {
+					//Interact with the server 
 					getRemoteAddress(name, serverName);
 				}
-			} while (name.indexOf("quit") < 0);
+				
+			} while (name.indexOf("quit") < 0); //until
 			
 			System.out.println("Cancelled by user request.");
 			
 		}catch (IOException x) {
+			//Print error code stack trace to the console.
 			x.printStackTrace();
 		}
 		
@@ -61,6 +63,7 @@ public class InetClient {
 	
 	static void getRemoteAddress( String name, String serverName) {
 		
+		int port = 1570;
 		Socket sock;
 		BufferedReader fromServer;
 		PrintStream toServer;
@@ -68,9 +71,9 @@ public class InetClient {
 		
 		try {
 			//Open a new socket connection to the server.
-			sock = new Socket(serverName, 1565);
+			sock = new Socket(serverName, port);
 			
-			//Acquire to from and to data streams
+			//Acquire from and to data streams from the socket
 			fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 			toServer = new PrintStream(sock.getOutputStream());
 			
@@ -88,7 +91,9 @@ public class InetClient {
 			
 		}
 		catch (IOException x) {
+			// Handle situations where the IO calls result in an IOexception  
 			System.out.println("Socketerror.");
+			//Print error code stack trace to the console.
 			x.printStackTrace();
 		}
 		

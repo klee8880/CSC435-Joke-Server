@@ -149,12 +149,14 @@ class Orator extends Thread {
 	List<Phrase> proverbs;
 	int jokeIndex = 0;
 	int proverbIndex = 0;
+	String username;
 	
 	//Constructor
 	public Orator(Socket sock, Phrase[] jokes, Phrase[] proverbs) {
 		this.sock = sock;
 		this.jokes = Arrays.asList(jokes);
 		this.proverbs = Arrays.asList(proverbs);
+		
 		//Randomize the list of phrases to be presented
 		Collections.shuffle(this.jokes);
 		Collections.shuffle(this.proverbs);
@@ -164,7 +166,6 @@ class Orator extends Thread {
 		
 		BufferedReader in = null;
 		PrintStream out = null;
-		String username;		
 		
 		try {
 			//Acquire in and out streams

@@ -82,7 +82,7 @@ public class InetClient {
 			//Force send data
 			toServer.flush();
 			
-			//Listen for a response up to 3 times
+			//Listen for a response up to 2 times
 			for (int i = 1; i <=3; i++) {
 				textFromServer = fromServer.readLine();
 				if (textFromServer != null) 

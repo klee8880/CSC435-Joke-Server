@@ -1,3 +1,8 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.Socket;
 
 /*--------------------------------------------------------
 
@@ -53,5 +58,130 @@ is made.
 ----------------------------------------------------------*/
 
 public class JokeClient {
+	
+	private static final int primaryPort= 4545;
+	private static final int secondaryPort = 4546;
+	
+	public static void main (String args []) {
+		
+		Boolean primaryMode = true;
+		
+		Socket primarySock;
+		String primaryServer;
+		BufferedReader primaryFromStream;
+		PrintStream primaryToStream;
+		
+		Socket secondSock;
+		String secondServer;
+		BufferedReader secondFromStream;
+		PrintStream secondToStream;
+		
+		//Optionally acquire the host's & secondary hots's name if it was provided
+		if (args.length < 1) {
+			primaryServer = "localhost";
+			secondServer = "localhost";
+		}
+		else if (args.length < 2) {
+			primaryServer = args[0];
+			secondServer = "localhost";
+		}
+		else {
+			primaryServer = args[0];
+			secondServer = args[1];
+		}
+		
+		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.01 \nUsing primary server: " );
+		output.append(primaryServer).append(", Port: ").append(primaryPort).append('\n')
+			.append("Using secondary server: ").append(secondServer).append(", Port: ").append(secondaryPort);
+		
+		System.out.println(output.toString());
+		System.out.flush();
+		
+		//Read from the local console
+		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		
+		try {
+			
+			String user;
+			String command;
+			
+			//Get User Name
+			System.out.print("Please enter a username: ");
+			user = in.readLine();
+			
+			//primary server
+			primarySock = new Socket(primaryServer, primaryPort);
+			primaryFromStream = new BufferedReader(new InputStreamReader(primarySock.getInputStream()));
+			primaryToStream = new PrintStream(primarySock.getOutputStream());
+			System.out.println("Connection 1 acquired...");
+			primaryToStream.println(user);
+			
+			/*//Secondary server
+			secondSock = new Socket(secondServer, secondaryPort);
+			secondFromStream = new BufferedReader(new InputStreamReader(secondSock.getInputStream()));
+			secondToStream = new PrintStream(secondSock.getOutputStream());
+			System.out.println("Connection 2 acquired...");
+			secondToStream.println(user);
+			*/
+			
+			//Communicate with the console
+			System.out.println("Commands:\np\t- get a new phrase\ns\t- Switch btw primary & secondary server\nquit\t- terminate connections\n");
+			
+			do {
+				
+				System.out.print("Command: ");
+				
+				command = in.readLine();
+				
+				switch(command) {
+				
+				case "p":
+					requestPhrase(primaryFromStream, primaryToStream, "p");
+					break;
+					
+				case "s":
+					if (primaryMode) 
+						primaryMode = false;
+					else 
+						primaryMode = true;
+					System.out.println("Server Mode switched...");
+					break;
+					
+				case "quit":
+					primaryToStream.println("quit");
+					primarySock.close();
+					//secondSock.close();
+					break;
+					
+				}
+				
+			} while (command.indexOf("quit") < 0);
+			
+			System.out.println("Local terminal stopped by user request.");
+			
+		}catch (IOException ioe) {
+			//Print error code stack trace to the console.
+			ioe.printStackTrace();
+		}
+		
+	}
+	
+	static void requestPhrase(BufferedReader in, PrintStream out, String command) {
+		out.println(command);
+		
+		try {
+			
+			//Read 2 lines from the server
+			for (int i = 0; i < 2; i++) {
+				String result = in.readLine();
+				if (result != null) 
+					System.out.println(result);
+			}
+			
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		
+	}
 
 }

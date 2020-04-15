@@ -61,7 +61,14 @@ import java.io.*;
 import java.net.*;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Dictionary;
+import java.util.Hashtable;
 import java.util.List;
+
+enum ServerMode {
+	joke,
+	proverb;
+}
 
 class Phrase{
 	public String header;
@@ -72,28 +79,82 @@ class Phrase{
 		this.header = header;
 		this.phrase = phrase;
 	}
+	
 	public String generate (String username) {
 		return new StringBuilder(header).append(" <").append(username).append("> : \"").append(phrase).append("\"").toString();
 	}
+
 }
 
-enum ServerMode {
-	joke,
-	proverb;
+class Account{
+	List <Phrase> jokes;
+	int jokeIndex = 0;
+	List <Phrase> proverbs;
+	int proverbIndex = 0;
+	
+	public Account(List<Phrase> jokes, List<Phrase> proverb) {
+		super();
+		this.jokes = jokes;
+		this.proverbs = proverb;
+		
+		resetJokes();
+		resetProverbs();
+	}
+	
+	public void resetJokes() {
+		Collections.shuffle(jokes);
+		jokeIndex = 0;
+	}
+	
+	public void resetProverbs() {
+		Collections.shuffle(proverbs);
+		proverbIndex = 0;
+	}
+	
+	public String nextJoke(String user) {
+		
+		Phrase result = jokes.get(jokeIndex);
+		jokeIndex++;
+		
+		if (jokeIndex >= jokes.size()) {
+			resetJokes();
+			return new StringBuilder(result.generate(user)).append("\nJOKE CYCLE COMPLETE").toString();
+		}
+		else {
+			return result.generate(user);
+		}
+	}
+
+	public String nextProverb(String user) {
+		
+		Phrase result = proverbs.get(proverbIndex);
+		proverbIndex++;
+		
+		if (proverbIndex >= proverbs.size()) {
+			resetJokes();
+			return new StringBuilder(result.generate(user)).append("\nJOKE CYCLE COMPLETE").toString();
+		}
+		else { 
+			return result.generate(user);
+		}
+	}
+
 }
 
 public class JokeServer{
+
+	static Dictionary<String, Account> accounts = new Hashtable<String, Account>();;
 	
 	static ServerMode mode = ServerMode.joke;
 	
-	private static Phrase [] jokes= {
+	public static Phrase [] jokeList= {
 			new Phrase("JA", "..."),
 			new Phrase("JB", "..."),
 			new Phrase("JC", "..."),
 			new Phrase("JD", "...")
 	};
 	
-	private static Phrase [] proverb= {
+	public static Phrase [] proverbList= {
 			new Phrase("PA", "..."),
 			new Phrase("PB", "..."),
 			new Phrase("PC", "..."),
@@ -125,6 +186,7 @@ public class JokeServer{
 			
 		//Wait for client connections and spawn threads.
 		Socket sock;
+		@SuppressWarnings("resource")
 		ServerSocket servsock = new ServerSocket (clientPort, queueLength);
 		
 		System.out.println("JokeServer now active.\nawaitning new requests...");
@@ -134,8 +196,8 @@ public class JokeServer{
 			//Initialize a new connection
 			sock = servsock.accept();
 			//Run program with the connection.
-			System.out.println("New connection Acquired...");
-			new Orator(sock, jokes, proverb).start();
+			System.out.println("Processing New Request...");
+			new Orator(sock).start();
 		}
 	}
 	
@@ -145,75 +207,43 @@ public class JokeServer{
 class Orator extends Thread {
 
 	Socket sock;
-	List<Phrase> jokes;
-	List<Phrase> proverbs;
+	
 	int jokeIndex = 0;
 	int proverbIndex = 0;
 	String username;
 	
-	//Constructor
-	public Orator(Socket sock, Phrase[] jokes, Phrase[] proverbs) {
+	public Orator(Socket sock) {
+		super();
 		this.sock = sock;
-		this.jokes = Arrays.asList(jokes);
-		this.proverbs = Arrays.asList(proverbs);
-		
-		//Randomize the list of phrases to be presented
-		Collections.shuffle(this.jokes);
-		Collections.shuffle(this.proverbs);
 	}
-	
+
 	public void run() {
 		
 		BufferedReader in = null;
 		PrintStream out = null;
 		
 		try {
+			
+			
+			
 			//Acquire in and out streams
 			in = new BufferedReader (new InputStreamReader(sock.getInputStream()));
 			out = new PrintStream(sock.getOutputStream());
 			
 			//Prompt for a User Name
 			username = in.readLine();
-			//TODO: Add ability to log on and return to previous position.
 			
+			//Look up user and add if not found
+			Account account = JokeServer.accounts.get(username);
 			
-			//Loop Jokes until the user requests disconnection.
-			String input = in.readLine();
-			
-			while (input.indexOf("quit") < 0) {
+			if (account == null) {
+				account = new Account(Arrays.asList(JokeServer.jokeList), Arrays.asList(JokeServer.proverbList));
 				
-				//Joke Function
-				if (JokeServer.mode == ServerMode.joke) {
-					if (input.equals("p")) {
-						out.println(jokes.get(jokeIndex).generate(username));
-						jokeIndex++;
-					}
-					
-					if (jokeIndex >= jokes.size()) {
-						jokeIndex = 0;
-						out.println("JOKE CYCLE COMPLETE");
-					}
-					else out.println();
-				}
-				
-				//Proverb Function
-				else {
-					if (input.equals("p")) {
-						out.println(proverbs.get(proverbIndex).generate(username));
-						proverbIndex++;
-					}
-					
-					if (proverbIndex >= jokes.size()) {
-						proverbIndex = 0;
-						out.println("JOKE CYCLE COMPLETE");
-					}
-					else out.println();
-				}
-				
-				input = in.readLine();
+				JokeServer.accounts.put(username, account);
 			}
 			
-			System.out.println("Connection Terminated...");
+			//print a joke or proverb (Account takes care of it's own list cycle)
+			out.println(account.nextJoke(username));
 			
 		}
 		catch(IOException ioe) {ioe.printStackTrace();} 

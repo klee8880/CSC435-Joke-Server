@@ -1,3 +1,8 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.Socket;
 
 /*--------------------------------------------------------
 
@@ -53,5 +58,10 @@ is made.
 ----------------------------------------------------------*/
 
 public class JokeClientAdmin {
-
+	
+	private static final int primaryPort= 5050;
+	private static final int secondaryPort = 5051;
+	
+	public static void main (String args []) {
+	}
 }

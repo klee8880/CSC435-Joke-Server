@@ -66,33 +66,29 @@ public class JokeClient {
 		
 		Boolean primaryMode = true;
 		
-		Socket primarySock;
 		String primaryServer;
-		BufferedReader primaryFromStream;
-		PrintStream primaryToStream;
-		
-		Socket secondSock;
 		String secondServer;
-		BufferedReader secondFromStream;
-		PrintStream secondToStream;
 		
 		//Optionally acquire the host's & secondary hots's name if it was provided
 		if (args.length < 1) {
 			primaryServer = "localhost";
-			secondServer = "localhost";
+			secondServer = null;
 		}
 		else if (args.length < 2) {
 			primaryServer = args[0];
-			secondServer = "localhost";
+			secondServer = null;
 		}
 		else {
 			primaryServer = args[0];
 			secondServer = args[1];
 		}
 		
-		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.01 \nUsing primary server: " );
-		output.append(primaryServer).append(", Port: ").append(primaryPort).append('\n')
-			.append("Using secondary server: ").append(secondServer).append(", Port: ").append(secondaryPort);
+		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.03 \nServer One: " );
+		
+		output.append(primaryServer).append(", port ").append(primaryPort).append('\n');
+		
+		if (secondServer != null) {output.append("Server Two: ").append(secondServer).append(", port ").append(secondaryPort);}
+		
 		
 		System.out.println(output.toString());
 		System.out.flush();
@@ -109,51 +105,37 @@ public class JokeClient {
 			System.out.print("Please enter a username: ");
 			user = in.readLine();
 			
-			//primary server
-			primarySock = new Socket(primaryServer, primaryPort);
-			primaryFromStream = new BufferedReader(new InputStreamReader(primarySock.getInputStream()));
-			primaryToStream = new PrintStream(primarySock.getOutputStream());
-			System.out.println("Connection 1 acquired...");
-			primaryToStream.println(user);
-			
-			/*//Secondary server
-			secondSock = new Socket(secondServer, secondaryPort);
-			secondFromStream = new BufferedReader(new InputStreamReader(secondSock.getInputStream()));
-			secondToStream = new PrintStream(secondSock.getOutputStream());
-			System.out.println("Connection 2 acquired...");
-			secondToStream.println(user);
-			*/
-			
 			//Communicate with the console
 			System.out.println("Commands:\np\t- get a new phrase\ns\t- Switch btw primary & secondary server\nquit\t- terminate connections\n");
 			
 			do {
+			
+			//Request new Input
+			System.out.print("Command: ");
+			command = in.readLine();
+			System.out.println();
+			
+			switch(command) {
+			
+			case "p":
+				requestPhrase(primaryServer, primaryPort, user);
+				break;
 				
-				System.out.print("Command: ");
-				
-				command = in.readLine();
-				
-				switch(command) {
-				
-				case "p":
-					requestPhrase(primaryFromStream, primaryToStream, "p");
-					break;
-					
-				case "s":
-					if (primaryMode) 
-						primaryMode = false;
-					else 
-						primaryMode = true;
-					System.out.println("Server Mode switched...");
-					break;
-					
-				case "quit":
-					primaryToStream.println("quit");
-					primarySock.close();
-					//secondSock.close();
-					break;
-					
+			case "s":
+				if (primaryMode) {
+					primaryMode = false;
+					System.out.println("Switched to Secondary Server");
 				}
+				else {
+					primaryMode = true;
+					System.out.println("Switched to Primary Server");
+				}	
+				break;
+				
+			default: 
+				break;
+				
+			}
 				
 			} while (command.indexOf("quit") < 0);
 			
@@ -166,17 +148,24 @@ public class JokeClient {
 		
 	}
 	
-	static void requestPhrase(BufferedReader in, PrintStream out, String command) {
-		out.println(command);
+	static void requestPhrase(String Server, int port, String command) {
+		
+		Socket sock;
+		BufferedReader fromStream;
+		PrintStream toStream;
 		
 		try {
 			
-			//Read 2 lines from the server
-			for (int i = 0; i < 2; i++) {
-				String result = in.readLine();
-				if (result != null) 
-					System.out.println(result);
-			}
+			//Acquire connection
+			sock = new Socket(Server, port);
+			fromStream = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+			toStream = new PrintStream(sock.getOutputStream());
+			
+			toStream.println(command);
+
+			//Read line from the server
+			String result = fromStream.readLine();
+			if (result != null) System.out.println(result);
 			
 		} catch (IOException ioe) {
 			ioe.printStackTrace();

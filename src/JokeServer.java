@@ -86,6 +86,18 @@ class Phrase{
 
 }
 
+class Pair {
+	public String string1;
+	public String string2;
+	
+	public Pair(String string1, String string2) {
+		super();
+		this.string1 = string1;
+		this.string2 = string2;
+	}
+
+}
+
 class Account{
 	List <Phrase> jokes;
 	int jokeIndex = 0;
@@ -111,31 +123,31 @@ class Account{
 		proverbIndex = 0;
 	}
 	
-	public String nextJoke(String user) {
+	public Pair nextJoke(String user) {
 		
 		Phrase result = jokes.get(jokeIndex);
 		jokeIndex++;
 		
 		if (jokeIndex >= jokes.size()) {
 			resetJokes();
-			return new StringBuilder(result.generate(user)).append("\nJOKE CYCLE COMPLETE").toString();
+			return new Pair(result.generate(user), "JOKE CYCLE COMPLETED");
 		}
 		else {
-			return result.generate(user);
+			return new Pair(result.generate(user), null);
 		}
 	}
 
-	public String nextProverb(String user) {
+	public Pair nextProverb(String user) {
 		
 		Phrase result = proverbs.get(proverbIndex);
 		proverbIndex++;
 		
 		if (proverbIndex >= proverbs.size()) {
 			resetJokes();
-			return new StringBuilder(result.generate(user)).append("\nJOKE CYCLE COMPLETE").toString();
+			return new Pair(result.generate(user), "PROVERB CYCLE COMPLETED");
 		}
-		else { 
-			return result.generate(user);
+		else {
+			return new Pair(result.generate(user), null);
 		}
 	}
 
@@ -196,7 +208,7 @@ public class JokeServer{
 			//Initialize a new connection
 			sock = servsock.accept();
 			//Run program with the connection.
-			System.out.println("Processing New Request...");
+			//System.out.println("Processing New Request...");
 			new Orator(sock).start();
 		}
 	}
@@ -243,7 +255,12 @@ class Orator extends Thread {
 			}
 			
 			//print a joke or proverb (Account takes care of it's own list cycle)
-			out.println(account.nextJoke(username));
+			Pair result = account.nextJoke(username);
+			
+			out.println(result.string1);
+			
+			if (result.string2 != null) out.println(result.string2);
+			else out.println();
 			
 		}
 		catch(IOException ioe) {ioe.printStackTrace();} 

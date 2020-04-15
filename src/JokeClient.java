@@ -164,9 +164,10 @@ public class JokeClient {
 			toStream.println(command);
 
 			//Read line from the server
-			String result = fromStream.readLine();
-			if (result != null) System.out.println(result);
-			
+			for (int i = 0; i < 2; i++) {
+				String result = fromStream.readLine();
+				if (result != null) System.out.println(result);
+			}
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}

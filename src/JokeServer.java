@@ -66,8 +66,19 @@ import java.util.Hashtable;
 import java.util.List;
 
 enum ServerMode {
-	joke,
-	proverb;
+	joke("j"),
+	proverb("p");
+	
+	private String base;
+	
+	ServerMode(String base){
+		this.base = base;
+	}
+	
+	@Override
+	public String toString() {
+		return base;
+	}
 }
 
 class Phrase{
@@ -145,7 +156,7 @@ public class JokeServer{
 
 	static Dictionary<String, Account> accounts = new Hashtable<String, Account>();;
 	
-	static ServerMode mode = ServerMode.joke;
+	public static ServerMode mode = ServerMode.joke;
 	
 	public static Phrase [] jokeList= {
 			new Phrase("JA", "..."),
@@ -196,12 +207,13 @@ public class JokeServer{
 			//Initialize a new connection
 			sock = servsock.accept();
 			//Run program with the connection.
-			//System.out.println("Processing New Request...");
 			new Speaker(sock).start();
 		}
 	}
 	
 }
+
+//----Joke/Proverb Handlers----
 
 //Return jokes and proverbs to the client on command.
 class Speaker extends Thread {
@@ -223,28 +235,25 @@ class Speaker extends Thread {
 		PrintStream out = null;
 		
 		try {
-			
-			
-			
+
 			//Acquire in and out streams
 			in = new BufferedReader (new InputStreamReader(sock.getInputStream()));
 			out = new PrintStream(sock.getOutputStream());
 			
 			//Prompt for a User Name
-			username = in.readLine();
+			username = in.readLine(); 
+			//standardize user names for case.
+			username = username.toUpperCase();
 			
 			//Look up user and add if not found
 			Account account = JokeServer.accounts.get(username);
-			
 			if (account == null) {
 				account = new Account(Arrays.asList(JokeServer.jokeList), Arrays.asList(JokeServer.proverbList));
-				
 				JokeServer.accounts.put(username, account);
 			}
 			
 			//print a joke or proverb (Account takes care of it's own list cycle)
 			String result = account.nextJoke(username);
-			
 			out.println(result);
 			
 		}
@@ -253,6 +262,7 @@ class Speaker extends Thread {
 	
 }
 
+//----Administrator connection handler----
 
 //Handles requests to change the mode from the administrator port
 class ModeChanger extends Thread {
@@ -266,18 +276,21 @@ class ModeChanger extends Thread {
 	}
 	
 	//Execution
+	@Override
 	public void run() {
 		
 		Socket sock;
 		
 		try {
+			@SuppressWarnings("resource")
 			ServerSocket servsock = new ServerSocket (adminPort, queueLength);
 			
 			//Busy waiting for a new connection request.
 			while (true) {
-				//Initialize a new connection
+				//Accept a new connection
 				sock = servsock.accept();
-				//Run program with the connection.
+				//Run program with the connection on a new thread.
+				new adminHandler(sock).run();
 			}
 			
 		} catch (IOException ioe) {
@@ -286,6 +299,61 @@ class ModeChanger extends Thread {
 	}
 	
 }
+
+class adminHandler extends Thread{
+	
+	Socket sock;
+	BufferedReader in = null;
+	PrintStream out = null;
+	
+	public adminHandler(Socket sock){
+		this.sock = sock;
+	}
+	
+	@Override
+	public void run() {
+		
+		try {
+			
+			//Acquire in and out streams
+			in = new BufferedReader (new InputStreamReader(sock.getInputStream()));
+			out = new PrintStream(sock.getOutputStream());
+
+			//Get instruction
+			String command = in.readLine();
+			
+			switch (command) {
+			case "t": //Toggle the server's mode btw joke and proverb
+				if (JokeServer.mode == ServerMode.joke) {
+					JokeServer.mode = ServerMode.proverb;
+					out.println("Server changed to PROVERB mode...");
+				}
+				else {
+					JokeServer.mode = ServerMode.joke;
+					out.println("Server changed to JOKE mode...");
+				}
+				break;
+				
+			default:
+				out.println("(ERROR) Unrecognized command string");
+				break;
+			}
+			
+		}catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		
+	}
+}
+
+
+
+
+
+
+
+
+
 
 
 

@@ -64,21 +64,22 @@ public class JokeClient {
 	
 	public static void main (String args []) {
 		
-		Boolean primaryMode = true;
-		
+		//Variable
+		boolean primaryMode = true;
 		String primaryServer;
 		String secondServer;
 		
 		//Optionally acquire the host's & secondary hots's name if it was provided
-		if (args.length < 1) {
+		if (args.length < 1) { // Default to using 1 connection local host
 			primaryServer = "localhost";
 			secondServer = null;
 		}
-		else if (args.length < 2) {
+		
+		else if (args.length < 2) { // Use provided argument for connection
 			primaryServer = args[0];
 			secondServer = null;
 		}
-		else {
+		else { // User provided 2 arguments for connections
 			primaryServer = args[0];
 			secondServer = args[1];
 		}

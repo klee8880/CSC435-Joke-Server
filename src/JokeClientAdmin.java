@@ -63,5 +63,20 @@ public class JokeClientAdmin {
 	private static final int secondaryPort = 5051;
 	
 	public static void main (String args []) {
+		
+		//Description: Joke cliet admin..
+		
+		//Process the args array or use local host as default
+		
+		//Prompt the user with command options
+		
+		//Process user input
+		
+			//Get their command
+			
+				//Switch inputs
+			
+				//Switch servers
+		
 	}
 }

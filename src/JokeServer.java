@@ -86,18 +86,6 @@ class Phrase{
 
 }
 
-class Pair {
-	public String string1;
-	public String string2;
-	
-	public Pair(String string1, String string2) {
-		super();
-		this.string1 = string1;
-		this.string2 = string2;
-	}
-
-}
-
 class Account{
 	List <Phrase> jokes;
 	int jokeIndex = 0;
@@ -123,31 +111,31 @@ class Account{
 		proverbIndex = 0;
 	}
 	
-	public Pair nextJoke(String user) {
+	public String nextJoke(String user) {
 		
 		Phrase result = jokes.get(jokeIndex);
 		jokeIndex++;
 		
 		if (jokeIndex >= jokes.size()) {
 			resetJokes();
-			return new Pair(result.generate(user), "JOKE CYCLE COMPLETED");
+			return new StringBuilder(result.generate(user)).append("\nJOKE CYCLE COMPLETED").toString();
 		}
 		else {
-			return new Pair(result.generate(user), null);
+			return new StringBuilder(result.generate(user)).append("\n").toString();
 		}
 	}
 
-	public Pair nextProverb(String user) {
+	public String nextProverb(String user) {
 		
 		Phrase result = proverbs.get(proverbIndex);
 		proverbIndex++;
 		
 		if (proverbIndex >= proverbs.size()) {
 			resetJokes();
-			return new Pair(result.generate(user), "PROVERB CYCLE COMPLETED");
+			return new StringBuilder(result.generate(user)).append("\nPROVERB CYCLE COMPLETED").toString();
 		}
 		else {
-			return new Pair(result.generate(user), null);
+			return new StringBuilder(result.generate(user)).append("\n").toString();
 		}
 	}
 
@@ -209,14 +197,14 @@ public class JokeServer{
 			sock = servsock.accept();
 			//Run program with the connection.
 			//System.out.println("Processing New Request...");
-			new Orator(sock).start();
+			new Speaker(sock).start();
 		}
 	}
 	
 }
 
 //Return jokes and proverbs to the client on command.
-class Orator extends Thread {
+class Speaker extends Thread {
 
 	Socket sock;
 	
@@ -224,7 +212,7 @@ class Orator extends Thread {
 	int proverbIndex = 0;
 	String username;
 	
-	public Orator(Socket sock) {
+	public Speaker(Socket sock) {
 		super();
 		this.sock = sock;
 	}
@@ -255,12 +243,9 @@ class Orator extends Thread {
 			}
 			
 			//print a joke or proverb (Account takes care of it's own list cycle)
-			Pair result = account.nextJoke(username);
+			String result = account.nextJoke(username);
 			
-			out.println(result.string1);
-			
-			if (result.string2 != null) out.println(result.string2);
-			else out.println();
+			out.println(result);
 			
 		}
 		catch(IOException ioe) {ioe.printStackTrace();} 

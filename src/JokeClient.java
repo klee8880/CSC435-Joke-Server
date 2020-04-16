@@ -24,7 +24,7 @@ e.g.:
 
 In separate shell windows:
 
-> java JokeServer
+> java JokeServer (2)
 > java JokeClient
 > java JokeClientAdmin
 
@@ -116,25 +116,24 @@ public class JokeClient {
 			System.out.println();
 			
 			switch(command) {
-			
+			//Make communication with the target server
 			case "p":
 				requestPhrase(primaryServer, primaryPort, user);
 				break;
-				
+			//Switch modes between the primary and secondary server
 			case "s":
-				if (primaryMode) {
+				if (primaryMode && secondServer != null) {
 					primaryMode = false;
 					System.out.println("Switched to Secondary Server");
 				}
 				else {
 					primaryMode = true;
 					System.out.println("Switched to Primary Server");
-				}	
+				}
 				break;
-				
-			default: 
+			default:
+				System.out.println("Unrecognized Command");
 				break;
-				
 			}
 				
 			} while (command.indexOf("quit") < 0);
@@ -148,7 +147,7 @@ public class JokeClient {
 		
 	}
 	
-	static void requestPhrase(String Server, int port, String command) {
+	static void requestPhrase(String Server, int port, String username) {
 		
 		Socket sock;
 		BufferedReader fromStream;
@@ -161,9 +160,10 @@ public class JokeClient {
 			fromStream = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 			toStream = new PrintStream(sock.getOutputStream());
 			
-			toStream.println(command);
+			//Send request to the server with the user name.
+			toStream.println(username);
 
-			//Read line from the server
+			//Read 2 line from the server
 			for (int i = 0; i < 2; i++) {
 				String result = fromStream.readLine();
 				if (result != null) System.out.println(result);

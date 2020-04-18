@@ -63,20 +63,102 @@ public class JokeClientAdmin {
 	private static final int secondaryPort = 5051;
 	
 	public static void main (String args []) {
-		
-		//Description: Joke cliet admin..
-		
+		String primaryServer;
+		String secondServer;
+		boolean primaryMode = true;
+				
 		//Process the args array or use local host as default
+		if (args.length < 1) { // Default to using 1 connection local host
+			primaryServer = "localhost";
+			secondServer = null;
+		}
+		
+		else if (args.length < 2) { // Use provided argument for connection
+			primaryServer = args[0];
+			secondServer = null;
+		}
+		else { // User provided 2 arguments for connections
+			primaryServer = args[0];
+			secondServer = args[1];
+		}
 		
 		//Prompt the user with command options
+		System.out.println("Kevin Lee's Joke Client, v.03");
+		System.out.println("S - switch btw primary and secondary servers");
+		System.out.println("T - toggle the current server's mode");
+		System.out.println("Quit - end program");
 		
-		//Process user input
+		BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
 		
-			//Get their command
+		//Process user input(s)
+		try {
 			
-				//Switch inputs
+			String command;
 			
-				//Switch servers
+			do {			
+				//Get their command
+				System.out.print("Command: ");
+				command = console.readLine();
+				
+				switch (command) {
+				
+				case "S": //Switch btw the primary and secondary server
+					if (primaryMode) {
+						primaryMode = false;
+						System.out.println("Changed to secondary mode");
+					}
+					else {
+						primaryMode = true;
+						System.out.println("Changed to primary mode");
+					}
+					break;
+				
+				case "T": //Toggle current server btw Joke and Proverb mode.
+					if (primaryMode)
+						connect(primaryPort, primaryServer, "t");
+					else 
+						connect(secondaryPort, secondServer, "t");
+					break;
+				
+				case "Quit":
+					break;
+					
+				default:
+					System.out.println("(ERROR) Unrecognized input");
+					break;
+				}
+				
+			} while (!command.equals("Quit"));
+		}
+		catch(IOException ioe) {
+			ioe.printStackTrace();
+		}
+	}
+	
+	private static void connect (int portNum, String server, String command) {
+		
+		Socket sock;
+		BufferedReader fromStream;
+		PrintStream toStream;
+		
+		try {
+			
+			//Acquire connection
+			sock = new Socket(server, portNum);
+			fromStream = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+			toStream = new PrintStream(sock.getOutputStream());
+			
+			//Send request to the server
+			toStream.println(command); toStream.flush();
+			
+			//Read back response and print to user.
+			String result = fromStream.readLine();
+			if (result != null) System.out.println(result);
+			
+		}catch(IOException ioe) {
+			ioe.printStackTrace();
+		}
 		
 	}
+	
 }

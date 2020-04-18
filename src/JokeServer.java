@@ -173,7 +173,7 @@ public class JokeServer{
 		};
 	
 	//Parameters
-	private static int queueLength = 6;
+	private static final int queueLength = 6;
 	
 	
 	//Execution
@@ -182,6 +182,8 @@ public class JokeServer{
 		int adminPort;
 		
 		//Determine if which port to monitor depending on if this is the primary or secondary server.
+		//jokeServer
+		//jokeServer secondary
 		if (args.length > 0 && args[0].equals("secondary")) {
 			clientPort = 4546;
 			adminPort = 5051;
@@ -327,10 +329,12 @@ class adminHandler extends Thread{
 				if (JokeServer.mode == ServerMode.joke) {
 					JokeServer.mode = ServerMode.proverb;
 					out.println("Server changed to PROVERB mode...");
+					System.out.println("Server changed to PROVERB mode...");
 				}
 				else {
 					JokeServer.mode = ServerMode.joke;
 					out.println("Server changed to JOKE mode...");
+					System.out.println("Server changed to JOKE mode...");
 				}
 				break;
 				

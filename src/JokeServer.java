@@ -142,7 +142,7 @@ class Account{
 		proverbIndex++;
 		
 		if (proverbIndex >= proverbs.size()) {
-			resetJokes();
+			resetProverbs();
 			return new StringBuilder(result.generate(user)).append("\nPROVERB CYCLE COMPLETED").toString();
 		}
 		else {
@@ -255,7 +255,13 @@ class Speaker extends Thread {
 			}
 			
 			//print a joke or proverb (Account takes care of it's own list cycle)
-			String result = account.nextJoke(username);
+			String result;
+			
+			if (JokeServer.mode == ServerMode.joke)
+				result = account.nextJoke(username);
+			else 
+				result = account.nextProverb(username);
+			
 			out.println(result);
 			
 		}

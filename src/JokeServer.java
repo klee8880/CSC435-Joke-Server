@@ -61,9 +61,9 @@ import java.io.*;
 import java.net.*;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 enum ServerMode {
 	joke("j"),
@@ -154,7 +154,7 @@ class Account{
 
 public class JokeServer{
 
-	static Dictionary<String, Account> accounts = new Hashtable<String, Account>();;
+	static Map<String, Account> accounts = new Hashtable<String, Account>();;
 	
 	public static ServerMode mode = ServerMode.joke;
 	
@@ -166,7 +166,7 @@ public class JokeServer{
 	};
 	
 	public static Phrase [] proverbList= {
-			new Phrase("PA", "..."),
+			new Phrase("PA", "A bird in the hand, is worth 2 in the bush."),
 			new Phrase("PB", "..."),
 			new Phrase("PC", "..."),
 			new Phrase("PD", "...")
@@ -180,6 +180,7 @@ public class JokeServer{
 	public static void main (String [] args)  throws IOException{
 		int clientPort;
 		int adminPort;
+		boolean secondary = false;
 		
 		//Determine if which port to monitor depending on if this is the primary or secondary server.
 		//jokeServer
@@ -187,14 +188,18 @@ public class JokeServer{
 		if (args.length > 0 && args[0].equals("secondary")) {
 			clientPort = 4546;
 			adminPort = 5051;
+			secondary = true;
 		}
 		else {
 			clientPort = 4545;
 			adminPort = 5050;
 		}
+		
+		//Tell the user about the ports and servers in use.
+		System.out.println("Listening for client connections on port: " + clientPort);
 			
 		//spawn mode server thread.
-		System.out.println("Spawning admin mode change thread...");
+		System.out.println("Listening for admin connections on port: " + adminPort);
 		new ModeChanger(adminPort).start();
 			
 		//Wait for client connections and spawn threads.
@@ -209,7 +214,7 @@ public class JokeServer{
 			//Initialize a new connection
 			sock = servsock.accept();
 			//Run program with the connection.
-			new Speaker(sock).start();
+			new Speaker(sock, secondary).start();
 		}
 	}
 	
@@ -225,10 +230,12 @@ class Speaker extends Thread {
 	int jokeIndex = 0;
 	int proverbIndex = 0;
 	String username;
+	boolean secondary;
 	
-	public Speaker(Socket sock) {
+	public Speaker(Socket sock, boolean secondary) {
 		super();
 		this.sock = sock;
+		this.secondary = secondary;
 	}
 
 	public void run() {
@@ -262,7 +269,10 @@ class Speaker extends Thread {
 			else 
 				result = account.nextProverb(username);
 			
-			out.println(result);
+			if (secondary)
+				out.println("<S2> " + result);
+			else
+				out.println(result);
 			
 		}
 		catch(IOException ioe) {ioe.printStackTrace();} 
@@ -276,9 +286,9 @@ class Speaker extends Thread {
 class ModeChanger extends Thread {
 	
 	private int adminPort;
-	private static int queueLength = 6;
+	private static final int queueLength = 6;
 	
-	//Constructor(s)
+	//Constructor(s)	
 	ModeChanger (int port){
 		adminPort = port;
 	}

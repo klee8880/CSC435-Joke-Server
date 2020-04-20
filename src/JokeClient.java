@@ -1,18 +1,10 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.net.Socket;
-
 /*--------------------------------------------------------
 
 1. Name / Date: Kevin Lee 4/19/2020
 
 2. Java version used, if not the official version for the class:
 
-e.g. build 1.5.0_06-b05
+build 1.8.0_161
 
 3. Precise command-line compilation examples / instructions:
 
@@ -44,6 +36,15 @@ the server to the clients. For exmaple, if the server is running at
 5. Notes:
 If no secondary port is specified in the main arguments then it is assumed no secondary is needed. 
 ----------------------------------------------------------*/
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.Socket;
+
 
 public class JokeClient {
 	
@@ -109,17 +110,25 @@ public class JokeClient {
 			switch(command) {
 			//Make communication with the target server
 			case "p":
-				requestPhrase(primaryServer, primaryPort, user, writer);
+				if (primaryMode) {
+					requestPhrase(primaryServer, primaryPort, user, writer);
+				}
+				else {
+					requestPhrase(secondServer, secondaryPort, user, writer);
+				}
 				break;
 			//Switch modes between the primary and secondary server
 			case "s":
-				if (primaryMode && secondServer != null) {
+				if (secondServer == null) {
+					System.out.println("No secondary server was provided on startup");
+				}
+				else if (primaryMode) {
 					primaryMode = false;
-					System.out.println("Switched to Secondary Server");
+					System.out.println("Changed to secondary mode");
 				}
 				else {
 					primaryMode = true;
-					System.out.println("Switched to Primary Server");
+					System.out.println("Changed to primary mode");
 				}
 				break;
 			case "quit":
@@ -175,7 +184,7 @@ public class JokeClient {
 	static synchronized void writeFile(BufferedWriter writer, String line) {
 		
 		try {
-			writer.write(line);
+			writer.write(line + '\n');
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

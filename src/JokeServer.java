@@ -1,16 +1,10 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.net.Socket;
-
 /*--------------------------------------------------------
 
 1. Name / Date: Kevin Lee 4/19/2020
 
 2. Java version used, if not the official version for the class:
 
-e.g. build 1.5.0_06-b05
+build 1.8.0_161
 
 3. Precise command-line compilation examples / instructions:
 
@@ -43,13 +37,17 @@ the server to the clients. For exmaple, if the server is running at
 
 ----------------------------------------------------------*/
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.Socket;
 import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Semaphore;
 
 class Phrase{
 	public String header;
@@ -141,7 +139,6 @@ class AccountList{
 public class JokeServer{
 	
 	//Parameters
-	private static final int queueLength = 6;
 	private static boolean mode = true;
 	public static AccountList accounts= new AccountList();
 
@@ -149,6 +146,7 @@ public class JokeServer{
 		int clientPort;
 		int adminPort;
 		boolean secondary = false;
+		final int queueLength = 6;
 		
 		//Determine if which port to monitor depending on if this is the primary or secondary server.
 		if (args.length > 0 && args[0].equals("secondary")) {

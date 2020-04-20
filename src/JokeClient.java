@@ -86,13 +86,15 @@ public class JokeClient {
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		
 		try {
-			
 			String user;
 			String command;
 			
 			//Get User Name
 			System.out.print("Please enter a username: ");
 			user = in.readLine();
+			
+			//Open a file for the user
+			BufferedWriter writer = new BufferedWriter(new FileWriter(user + ".txt"));
 			
 			//Communicate with the console
 			System.out.println("Commands:\np\t- get a new phrase\ns\t- Switch btw primary & secondary server\nquit\t- terminate connections\n");
@@ -107,7 +109,7 @@ public class JokeClient {
 			switch(command) {
 			//Make communication with the target server
 			case "p":
-				requestPhrase(primaryServer, primaryPort, user);
+				requestPhrase(primaryServer, primaryPort, user, writer);
 				break;
 			//Switch modes between the primary and secondary server
 			case "s":
@@ -120,6 +122,8 @@ public class JokeClient {
 					System.out.println("Switched to Primary Server");
 				}
 				break;
+			case "quit":
+				break;
 			default:
 				System.out.println("Unrecognized Command");
 				break;
@@ -127,6 +131,7 @@ public class JokeClient {
 				
 			} while (command.indexOf("quit") < 0);
 			
+			writer.close();
 			System.out.println("Local terminal stopped by user request.");
 			
 		}catch (IOException ioe) {
@@ -136,7 +141,7 @@ public class JokeClient {
 		
 	}
 	
-	static void requestPhrase(String Server, int port, String username) {
+	static void requestPhrase(String Server, int port, String username, BufferedWriter writer) {
 		
 		Socket sock;
 		BufferedReader fromStream;
@@ -157,7 +162,7 @@ public class JokeClient {
 				String result = fromStream.readLine();
 				if (result != null) {
 					System.out.println(result);
-					writeFile(result);
+					writeFile(writer, result);
 				}
 			}
 		} catch (IOException ioe) {
@@ -167,14 +172,10 @@ public class JokeClient {
 	}
 
 	//Write server result to a file for audit
-	static synchronized void writeFile(String line) {
-		
-		BufferedWriter writer = null;
+	static synchronized void writeFile(BufferedWriter writer, String line) {
 		
 		try {
-			writer = new BufferedWriter(new FileWriter("log.txt"));
 			writer.write(line);
-			writer.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

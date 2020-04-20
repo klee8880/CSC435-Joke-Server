@@ -6,7 +6,7 @@ public class InetClient {
 	public static void main (String args []) {
 		
 		String serverName;
-		int port = 1570;
+		int port = 1565;
 		
 		//Optionally acquire the host's name if it was provided
 		if (args.length < 1) serverName = "localhost";

@@ -6,7 +6,7 @@ import java.net.Socket;
 
 /*--------------------------------------------------------
 
-1. Name / Date:
+1. Name / Date: Kevin Lee 4/19/2020
 
 2. Java version used, if not the official version for the class:
 
@@ -14,17 +14,13 @@ e.g. build 1.5.0_06-b05
 
 3. Precise command-line compilation examples / instructions:
 
-e.g.:
-
-> javac JokeServer.java
+> javac JokeClientAdmin.java
 
 4. Precise examples / instructions to run this program:
 
-e.g.:
-
 In separate shell windows:
 
-> java JokeServer
+> java JokeServer (2)
 > java JokeClient
 > java JokeClientAdmin
 
@@ -39,22 +35,12 @@ the server to the clients. For exmaple, if the server is running at
 
 5. List of files needed for running the program.
 
-e.g.:
-
- a. checklist.html
- b. JokeServer.java
- c. JokeClient.java
- d. JokeClientAdmin.java
+ a. JokeServer.java
+ b. JokeClient.java
+ c. JokeClientAdmin.java
 
 5. Notes:
-
-e.g.:
-
-I faked the random number generator. I have a bug that comes up once every
-ten runs or so. If the server hangs, just kill it and restart it. You do not
-have to restart the clients, they will find the server again when a request
-is made.
-
+If no secondary port is specified in the main arguments then it is assumed no secondary is needed. 
 ----------------------------------------------------------*/
 
 public class JokeClientAdmin {
@@ -103,7 +89,10 @@ public class JokeClientAdmin {
 				switch (command) {
 				
 				case "S": //Switch btw the primary and secondary server
-					if (primaryMode) {
+					if (secondServer == null) {
+						System.out.println("No secondary server was provided on startup");
+					}
+					else if (primaryMode) {
 						primaryMode = false;
 						System.out.println("Changed to secondary mode");
 					}

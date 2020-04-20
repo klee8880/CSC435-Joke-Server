@@ -1,7 +1,12 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.Socket;
 
 /*--------------------------------------------------------
 
-1. Name / Date:
+1. Name / Date: Kevin Lee 4/19/2020
 
 2. Java version used, if not the official version for the class:
 
@@ -9,17 +14,13 @@ e.g. build 1.5.0_06-b05
 
 3. Precise command-line compilation examples / instructions:
 
-e.g.:
-
 > javac JokeServer.java
 
 4. Precise examples / instructions to run this program:
 
-e.g.:
+In separate shell windows or computers:
 
-In separate shell windows:
-
-> java JokeServer
+> java JokeServer (2)
 > java JokeClient
 > java JokeClientAdmin
 
@@ -34,56 +35,26 @@ the server to the clients. For exmaple, if the server is running at
 
 5. List of files needed for running the program.
 
-e.g.:
-
- a. checklist.html
- b. JokeServer.java
- c. JokeClient.java
- d. JokeClientAdmin.java
+ a. JokeServer.java
+ b. JokeClient.java
+ c. JokeClientAdmin.java
 
 5. Notes:
 
-e.g.:
-
-I faked the random number generator. I have a bug that comes up once every
-ten runs or so. If the server hangs, just kill it and restart it. You do not
-have to restart the clients, they will find the server again when a request
-is made.
-
 ----------------------------------------------------------*/
 
-/*
- * Administered for the serving jokes/proverbs to clients, Also handles when an administrator logs in on a separate channel.
- * Spawns threads to handle all the clients
- */
-
-import java.io.*;
-import java.net.*;
+import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-
-enum ServerMode {
-	joke("j"),
-	proverb("p");
-	
-	private String base;
-	
-	ServerMode(String base){
-		this.base = base;
-	}
-	
-	@Override
-	public String toString() {
-		return base;
-	}
-}
+import java.util.concurrent.Semaphore;
 
 class Phrase{
 	public String header;
-	public String phrase;	
+	public String phrase;
+	
 	//Constructor
 	public Phrase(String header, String phrase) {
 		super();
@@ -92,9 +63,8 @@ class Phrase{
 	}
 	
 	public String generate (String username) {
-		return new StringBuilder(header).append(" <").append(username).append("> : \"").append(phrase).append("\"").toString();
+		return header + " <" + username + "> : \"" + phrase+ "\"";
 	}
-
 }
 
 class Account{
@@ -103,23 +73,21 @@ class Account{
 	List <Phrase> proverbs;
 	int proverbIndex = 0;
 	
-	public Account(List<Phrase> jokes, List<Phrase> proverb) {
+	public Account(Phrase[] jokeList, Phrase[] proverbList) {
 		super();
-		this.jokes = jokes;
-		this.proverbs = proverb;
+		this.jokes = Arrays.asList(jokeList);
+		this.proverbs = Arrays.asList(proverbList);
 		
-		resetJokes();
-		resetProverbs();
+		Collections.shuffle(this.jokes);
+		Collections.shuffle(this.proverbs);
 	}
 	
 	public void resetJokes() {
 		Collections.shuffle(jokes);
-		jokeIndex = 0;
 	}
 	
 	public void resetProverbs() {
 		Collections.shuffle(proverbs);
-		proverbIndex = 0;
 	}
 	
 	public String nextJoke(String user) {
@@ -129,11 +97,11 @@ class Account{
 		
 		if (jokeIndex >= jokes.size()) {
 			resetJokes();
-			return new StringBuilder(result.generate(user)).append("\nJOKE CYCLE COMPLETED").toString();
+			jokeIndex = 0;
+			return result.generate(user) + "\nJOKE CYCLE COMPLETED";
 		}
-		else {
-			return new StringBuilder(result.generate(user)).append("\n").toString();
-		}
+		else
+			return result.generate(user) + "\n";
 	}
 
 	public String nextProverb(String user) {
@@ -143,48 +111,46 @@ class Account{
 		
 		if (proverbIndex >= proverbs.size()) {
 			resetProverbs();
-			return new StringBuilder(result.generate(user)).append("\nPROVERB CYCLE COMPLETED").toString();
+			proverbIndex = 0;
+			return result.generate(user) + "\nPROVERB CYCLE COMPLETED";
 		}
-		else {
-			return new StringBuilder(result.generate(user)).append("\n").toString();
-		}
+		else
+			return result.generate(user) + "\n";
 	}
 
 }
 
-public class JokeServer{
+class AccountList{
+	
+	private Map<String, Account> accounts = new Hashtable<String, Account>();
+	
+	//Add an account to the map. Returns the account itself
+	public synchronized Account addAccount(String user, Phrase [] jokes, Phrase [] proverbs){
+		Account newAccount = new Account(jokes, proverbs);
+		accounts.put(user, newAccount);
+		return newAccount;
+	}
+	
+	//Look up account for user.
+	public synchronized Account findAccount(String user) {
+		Account result = accounts.get(user);
+		return result;
+	}
+}
 
-	static Map<String, Account> accounts = new Hashtable<String, Account>();;
-	
-	public static ServerMode mode = ServerMode.joke;
-	
-	public static Phrase [] jokeList= {
-			new Phrase("JA", "..."),
-			new Phrase("JB", "..."),
-			new Phrase("JC", "..."),
-			new Phrase("JD", "...")
-	};
-	
-	public static Phrase [] proverbList= {
-			new Phrase("PA", "A bird in the hand, is worth 2 in the bush."),
-			new Phrase("PB", "..."),
-			new Phrase("PC", "..."),
-			new Phrase("PD", "...")
-		};
+public class JokeServer{
 	
 	//Parameters
 	private static final int queueLength = 6;
-	
-	
-	//Execution
+	private static boolean mode = true;
+	public static AccountList accounts= new AccountList();
+
 	public static void main (String [] args)  throws IOException{
 		int clientPort;
 		int adminPort;
 		boolean secondary = false;
 		
 		//Determine if which port to monitor depending on if this is the primary or secondary server.
-		//jokeServer
-		//jokeServer secondary
 		if (args.length > 0 && args[0].equals("secondary")) {
 			clientPort = 4546;
 			adminPort = 5051;
@@ -213,12 +179,30 @@ public class JokeServer{
 		while (true) {
 			//Initialize a new connection
 			sock = servsock.accept();
+			
+			System.out.println("Connection Acquired");
 			//Run program with the connection.
 			new Speaker(sock, secondary).start();
 		}
 	}
 	
+	//get the current mode of the server
+	//Semaphore locked to avoid thread conflicts
+	public static synchronized boolean getMode() {
+	
+		boolean result = mode;
+		return result;
+	}
+	
+	//toggle the mode of the server
+	//Semaphore locked to avoid thread conflicts
+	public static synchronized void changeMode() {
+		if (mode) mode = false;
+		else mode = true;
+	}
+	
 }
+
 
 //----Joke/Proverb Handlers----
 
@@ -232,9 +216,24 @@ class Speaker extends Thread {
 	String username;
 	boolean secondary;
 	
-	public Speaker(Socket sock, boolean secondary) {
+	//Static arrays
+	public static Phrase [] jokeList= {
+			new Phrase("JA", "There was a kidnapping earlier, but I woke him up."),
+			new Phrase("JB", "What did the sushi say to the bee? Wasabi."),
+			new Phrase("JC", "Hear about the guy who got his left side removed? He's alright now."),
+			new Phrase("JD", "My friends bakery burned down, now his business is toast.")
+	};
+	
+	public static Phrase [] proverbList= {
+			new Phrase("PA", "A bird in the hand, is worth 2 in the bush."),
+			new Phrase("PB", "Look strong when you are weak, and weak when you are strong."),
+			new Phrase("PC", "If you know your enemy, and know yourself, you need not fear the result of a hundred battles"),
+			new Phrase("PD", "I know not which ways the wind will blow. Only how to set my sails.")
+	};
+	
+	public Speaker(Socket socketPassed, boolean secondary) {
 		super();
-		this.sock = sock;
+		this.sock = socketPassed;
 		this.secondary = secondary;
 	}
 
@@ -255,16 +254,13 @@ class Speaker extends Thread {
 			username = username.toUpperCase();
 			
 			//Look up user and add if not found
-			Account account = JokeServer.accounts.get(username);
-			if (account == null) {
-				account = new Account(Arrays.asList(JokeServer.jokeList), Arrays.asList(JokeServer.proverbList));
-				JokeServer.accounts.put(username, account);
-			}
+			Account account = JokeServer.accounts.findAccount(username);
+			if (account == null) account = JokeServer.accounts.addAccount(username, jokeList, proverbList);
 			
 			//print a joke or proverb (Account takes care of it's own list cycle)
 			String result;
 			
-			if (JokeServer.mode == ServerMode.joke)
+			if (JokeServer.getMode())
 				result = account.nextJoke(username);
 			else 
 				result = account.nextProverb(username);
@@ -275,7 +271,7 @@ class Speaker extends Thread {
 				out.println(result);
 			
 		}
-		catch(IOException ioe) {ioe.printStackTrace();} 
+		catch(Exception ex) {ex.printStackTrace();} 
 	}
 	
 }
@@ -307,8 +303,9 @@ class ModeChanger extends Thread {
 			while (true) {
 				//Accept a new connection
 				sock = servsock.accept();
+				System.out.println("Admin connection accepted");
 				//Run program with the connection on a new thread.
-				new adminHandler(sock).run();
+				new AdminHandler(sock).run();
 			}
 			
 		} catch (IOException ioe) {
@@ -318,13 +315,13 @@ class ModeChanger extends Thread {
 	
 }
 
-class adminHandler extends Thread{
+class AdminHandler extends Thread{
 	
 	Socket sock;
 	BufferedReader in = null;
 	PrintStream out = null;
 	
-	public adminHandler(Socket sock){
+	public AdminHandler(Socket sock){
 		this.sock = sock;
 	}
 	
@@ -340,20 +337,12 @@ class adminHandler extends Thread{
 			//Get instruction
 			String command = in.readLine();
 			
+			System.out.println(command);
+			
 			switch (command) {
 			case "t": //Toggle the server's mode btw joke and proverb
-				if (JokeServer.mode == ServerMode.joke) {
-					JokeServer.mode = ServerMode.proverb;
-					out.println("Server changed to PROVERB mode...");
-					System.out.println("Server changed to PROVERB mode...");
-				}
-				else {
-					JokeServer.mode = ServerMode.joke;
-					out.println("Server changed to JOKE mode...");
-					System.out.println("Server changed to JOKE mode...");
-				}
-				break;
-				
+				JokeServer.changeMode();
+				out.println("Mode changed");
 			default:
 				out.println("(ERROR) Unrecognized command string");
 				break;
@@ -365,18 +354,3 @@ class adminHandler extends Thread{
 		
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

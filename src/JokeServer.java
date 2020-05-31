@@ -247,9 +247,7 @@ class Speaker extends Thread {
 			out = new PrintStream(sock.getOutputStream());
 			
 			//Prompt for a User Name
-			username = in.readLine(); 
-			//standardize user names for case.
-			username = username.toUpperCase();
+			username = in.readLine().toUpperCase();
 			
 			//Look up user and add if not found
 			Account account = JokeServer.accounts.findAccount(username);
@@ -306,9 +304,7 @@ class ModeChanger extends Thread {
 				new AdminHandler(sock).run();
 			}
 			
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
+		} catch (IOException ioe) {ioe.printStackTrace();}
 	}
 	
 }

@@ -46,8 +46,10 @@ import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 class Phrase{
@@ -143,69 +145,80 @@ class AccountList{
 	}
 }
 
-public class AsyncJokeServer{
+public class AsyncJokeServer extends Thread{
+	//Constants
+	public static final String PORTTAG = "[PortReqeust: ";
+	public static final String PHRASETAG = "[Phrase: ";
+	private static final int queueLength = 6;
 	
 	//Parameters
-	private static boolean mode = true;
+	private Semaphore modeLock = new Semaphore(1);
+	private boolean mode = true;
 	public static AccountList accounts= new AccountList();
+	private int clientPort;
+	private int adminPort;
+	
+	//Constructor
+	public AsyncJokeServer(int clientPort) {
+		super();
+		this.clientPort = clientPort;
+		this.adminPort = clientPort + 10;
+	}
 
-	public static void main (String [] args)  throws IOException{
-		int clientPort;
-		int adminPort;
-		boolean secondary = false;
-		final int queueLength = 6;
-		
-		//Determine if which port to monitor depending on if this is the primary or secondary server.
-		if (args.length > 0 && args[0].equals("secondary")) {
-			clientPort = 4546;
-			adminPort = 5051;
-			secondary = true;
-		}
-		else {
-			clientPort = 4545;
-			adminPort = 5050;
-		}
-		
+	//Getters and Setters
+	public boolean getMode() throws InterruptedException {
+		modeLock.acquire();
+		boolean result = mode;
+		modeLock.release();
+		return result;
+	}
+	
+	public void changeMode() throws InterruptedException {
+		modeLock.acquire();
+		if (mode) mode = false;
+		else mode = true;
+		modeLock.release();
+	}
+	
+	@Override
+	public void run() {
 		//Tell the user about the ports and servers in use.
 		System.out.println("Listening for client connections on port: " + clientPort);
 			
 		//spawn mode server thread.
 		System.out.println("Listening for admin connections on port: " + adminPort);
-		new ModeChanger(adminPort).start();
+		new ModeChanger(adminPort, this).start();
 			
-		//Wait for client connections and spawn threads.
-		Socket sock;
-		@SuppressWarnings("resource")
-		ServerSocket servsock = new ServerSocket (clientPort, queueLength);
-		
-		System.out.println("JokeServer now active.\nawaitning new requests...");
-		
-		//Busy waiting for a new connection request.
-		while (true) {
-			//Initialize a new connection
-			sock = servsock.accept();
+		try {
+			//Wait for client connections and spawn threads.
+			Socket sock;
+			@SuppressWarnings("resource")
+			ServerSocket servsock = new ServerSocket (clientPort, queueLength);
 			
-			System.out.println("Connection Acquired");
-			//Run program with the connection.
-			new Speaker(sock, secondary).start();
-		}
+			System.out.println("JokeServer now active.\nawaitning new requests...");
+			
+			//Busy waiting for a new connection request.
+			while (true) {
+				//Initialize a new connection
+				sock = servsock.accept();
+				
+				System.out.println("Connection Acquired");
+				//Run program with the connection.
+				new Speaker(sock, this).start();
+			}
+		} catch (IOException e) {e.printStackTrace();}
 	}
 	
-	//get the current mode of the server
-	//Semaphore locked to avoid thread conflicts
-	public static synchronized boolean getMode() {
-	
-		boolean result = mode;
-		return result;
+//-----MAIN CLASS FOR FILE-----
+	public static void main (String [] args) throws Exception{
+		int port;
+		
+		//Check arguments
+		if (args.length < 1) {port = 4545;} //Defaults to 4545 if no arguments passed
+		else {port = Integer.parseInt(args[0]);} //Parse the argument into a integer.
+		//Spawn the server
+		new AsyncJokeServer(port).start();
 	}
-	
-	//toggle the mode of the server
-	//Semaphore locked to avoid thread conflicts
-	public static synchronized void changeMode() {
-		if (mode) mode = false;
-		else mode = true;
-	}
-	
 }
 
 
@@ -213,13 +226,11 @@ public class AsyncJokeServer{
 
 //Return jokes and proverbs to the client on command.
 class Speaker extends Thread {
-
+	AsyncJokeServer parent;
 	Socket sock;
-	
 	int jokeIndex = 0;
 	int proverbIndex = 0;
-	String username;
-	boolean secondary;
+	String command;
 	
 	//Static arrays
 	public static Phrase [] jokeList= {
@@ -236,10 +247,10 @@ class Speaker extends Thread {
 			new Phrase("PD", "I know not which ways the wind will blow. Only how to set my sails.")
 	};
 	
-	public Speaker(Socket socketPassed, boolean secondary) {
+	public Speaker(Socket socketPassed, AsyncJokeServer parent) {
 		super();
 		this.sock = socketPassed;
-		this.secondary = secondary;
+		this.parent = parent;
 	}
 
 	public void run() {
@@ -254,30 +265,60 @@ class Speaker extends Thread {
 			out = new PrintStream(sock.getOutputStream());
 			
 			//Prompt for a User Name
-			username = in.readLine().toUpperCase();
+			command = in.readLine().toUpperCase();
 			
-			//Look up user and add if not found
-			Account account = AsyncJokeServer.accounts.findAccount(username);
-			if (account == null) account = AsyncJokeServer.accounts.addAccount(username, jokeList, proverbList);
+			//Close the socket
+			sock.close();
 			
-			//print a joke or proverb (Account takes care of it's own list cycle)
-			String result;
-			
-			if (AsyncJokeServer.getMode())
-				result = account.nextJoke(username);
-			else 
-				result = account.nextProverb(username);
-			
-			//Wait 40 seconds for demonstration of client Async
-			TimeUnit.SECONDS.sleep(40);
-			
-			if (secondary)
-				out.println("<S2> " + result);
-			else
-				out.println(result);
+			//Detect type of command
+			if (command.indexOf(AsyncJokeServer.PORTTAG) > -1) {
+				out.println(phraseRequest(command));
+			}
+			else if (command.indexOf(AsyncJokeServer.PHRASETAG) > -1) {
+				out.println(portRequest(command));
+			}
 			
 		}
 		catch(Exception ex) {ex.printStackTrace();} 
+	}
+	
+	/**Retrieve the next joke or proverb assigned to this account.
+	 * @param command
+	 * @return string
+	 */
+	private String phraseRequest(String command) {
+		
+		//Parse the user name
+		String username = parseUserName (command, AsyncJokeServer.PHRASETAG);
+		
+		//Look up user and add if not found
+		Account account = AsyncJokeServer.accounts.findAccount(username);
+		if (account == null) account = AsyncJokeServer.accounts.addAccount(username, jokeList, proverbList);
+		
+		//print a joke or proverb (Account takes care of it's own list cycle)
+		//TODO: add phrase functionality
+		return account.nextJoke(username);
+	}
+	
+	/**Retreive the port number attached to this account
+	 * @param command
+	 * @return int with a port number
+	 */
+	private int portRequest(String command) {
+		
+		//Parse the user name
+		String username = parseUserName (command, AsyncJokeServer.PORTTAG);
+		//Look up user and add if not found
+		Account account = AsyncJokeServer.accounts.findAccount(username);
+		if (account == null) account = AsyncJokeServer.accounts.addAccount(username, jokeList, proverbList);
+				
+		//Return the port number of this account.
+		return account.port;
+	}
+	
+	//Parse the user name out of a given request string and provided tag
+	private String parseUserName(String input, String tag) {
+		return input.substring(input.indexOf(tag), input.indexOf("]", input.indexOf(tag)));
 	}
 	
 }
@@ -286,13 +327,14 @@ class Speaker extends Thread {
 
 //Handles requests to change the mode from the administrator port
 class ModeChanger extends Thread {
-	
+	AsyncJokeServer parent;
 	private int adminPort;
 	private static final int queueLength = 6;
 	
 	//Constructor(s)	
-	ModeChanger (int port){
+	ModeChanger (int port, AsyncJokeServer parent){
 		adminPort = port;
+		this.parent = parent;
 	}
 	
 	//Execution
@@ -311,7 +353,7 @@ class ModeChanger extends Thread {
 				sock = servsock.accept();
 				System.out.println("Admin connection accepted");
 				//Run program with the connection on a new thread.
-				new AdminHandler(sock).run();
+				new AdminHandler(sock, parent).run();
 			}
 			
 		} catch (IOException ioe) {ioe.printStackTrace();}
@@ -320,13 +362,14 @@ class ModeChanger extends Thread {
 }
 
 class AdminHandler extends Thread{
-	
+	AsyncJokeServer parent;
 	Socket sock;
 	BufferedReader in = null;
 	PrintStream out = null;
 	
-	public AdminHandler(Socket sock){
+	public AdminHandler(Socket sock, AsyncJokeServer parent){
 		this.sock = sock;
+		this.parent = parent;
 	}
 	
 	@Override
@@ -345,16 +388,14 @@ class AdminHandler extends Thread{
 			
 			switch (command) {
 			case "t": //Toggle the server's mode btw joke and proverb
-				AsyncJokeServer.changeMode();
+				parent.changeMode();
 				out.println("Mode changed");
 			default:
 				out.println("(ERROR) Unrecognized command string");
 				break;
 			}
 			
-		}catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
+		}catch (IOException | InterruptedException ex) {ex.printStackTrace();}
 		
 	}
 }

@@ -45,7 +45,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.Hashtable;
 import java.util.LinkedList;
+import java.util.Map;
 
 
 public class AsyncJokeClient {
@@ -60,6 +62,7 @@ public class AsyncJokeClient {
 		//Variable
 		String primaryServer;
 		String secondServer;
+		Map<Character, Integer> servers = new Hashtable<Character, Integer>();
 		
 		//TODO: Change so that each argument presented is a port to listen on.
 		//Optionally acquire the host's & secondary hots's name if it was provided

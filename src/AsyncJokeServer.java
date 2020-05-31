@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 class Phrase{
 	public String header;
@@ -260,6 +261,9 @@ class Speaker extends Thread {
 				result = account.nextJoke(username);
 			else 
 				result = account.nextProverb(username);
+			
+			//Wait 40 seconds for demonstration of client Async
+			TimeUnit.SECONDS.sleep(40);
 			
 			if (secondary)
 				out.println("<S2> " + result);

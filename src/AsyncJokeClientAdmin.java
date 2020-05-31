@@ -87,7 +87,7 @@ public class AsyncJokeClientAdmin {
 				System.out.print("Command: ");
 				command = console.readLine();
 				
-				switch (command) {
+				switch (command.toUpperCase()) {
 				
 				case "S": //Switch btw the primary and secondary server
 					if (secondServer == null) {

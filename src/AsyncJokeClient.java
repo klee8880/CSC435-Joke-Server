@@ -7,16 +7,17 @@
 build 1.8.0_161
 
 3. Precise command-line compilation examples / instructions:
-
-> javac JokeClient.java
+> javac AsyncJokeServer.java
+> javac AsyncJokeClient.java
+> javac AsyncJokeClientAdmin.java
 
 4. Precise examples / instructions to run this program:
 
 In separate shell windows:
 
-> java JokeServer (2)
-> java JokeClient
-> java JokeClientAdmin
+> java AsyncJokeServer (2)
+> java AsyncJokeClient (n)
+> java AsyncJokeClientAdmin
 
 All acceptable commands are displayed on the various consoles.
 
@@ -29,9 +30,9 @@ the server to the clients. For exmaple, if the server is running at
 
 5. List of files needed for running the program.
 
- a. JokeServer.java
- b. JokeClient.java
- c. JokeClientAdmin.java
+ a. AsyncJokeServer.java
+ b. AsyncJokeClient.java
+ c. AsyncJokeClientAdmin.java
 
 5. Notes:
 If no secondary port is specified in the main arguments then it is assumed no secondary is needed. 
@@ -44,17 +45,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.LinkedList;
 
 
 public class AsyncJokeClient {
 	
-	private static final int primaryPort= 4545;
-	private static final int secondaryPort = 4546;
+	private static final int PRIMARY= 4545;
+	private static final int SECONDARY = 4546;
+	private static final String PROMPT= "Enter A or B to get a joke or proverb, or numbers for sum: ";
 	
 	public static void main (String args []) {
 		
 		//Variable
-		boolean primaryMode = true;
 		String primaryServer;
 		String secondServer;
 		
@@ -73,12 +75,12 @@ public class AsyncJokeClient {
 			secondServer = args[1];
 		}
 		
+		//TODO: Start response thread/Make Response thread
+		
+		//Console Prompts
 		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.03 \nServer One: " );
-		
-		output.append(primaryServer).append(", port ").append(primaryPort).append('\n');
-		
-		if (secondServer != null) {output.append("Server Two: ").append(secondServer).append(", port ").append(secondaryPort);}
-		
+		output.append(primaryServer).append(", port ").append(PRIMARY).append('\n');
+		if (secondServer != null) {output.append("Server Two: ").append(secondServer).append(", port ").append(SECONDARY);}
 		
 		System.out.println(output.toString());
 		System.out.flush();
@@ -98,43 +100,31 @@ public class AsyncJokeClient {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(user + ".txt"));
 			
 			//Communicate with the console
-			System.out.println("Commands:\np\t- get a new phrase\ns\t- Switch btw primary & secondary server\nquit\t- terminate connections\n");
+			System.out.println(PROMPT);
 			
 			do {
 			
 			//Request new Input
 			System.out.print("Command: ");
-			command = in.readLine();
+			command = in.readLine().trim();//Read & sanitize inputs
 			System.out.println();
 			
-			switch(command) {
-			//Make communication with the target server
-			case "p":
-				if (primaryMode) {
-					requestPhrase(primaryServer, primaryPort, user, writer);
-				}
-				else {
-					requestPhrase(secondServer, secondaryPort, user, writer);
-				}
+			//TODO: Make better command Parser
+			switch(command.toUpperCase()) {
+			//Request phrase from primary
+			case "A":
+				requestPhrase(primaryServer, PRIMARY, user, writer);
 				break;
-			//Switch modes between the primary and secondary server
-			case "s":
-				if (secondServer == null) {
-					System.out.println("No secondary server was provided on startup");
-				}
-				else if (primaryMode) {
-					primaryMode = false;
-					System.out.println("Changed to secondary mode");
-				}
-				else {
-					primaryMode = true;
-					System.out.println("Changed to primary mode");
-				}
+			//Request phrase from secondary
+			case "B":
+				requestPhrase(secondServer, SECONDARY, user, writer);
 				break;
 			case "quit":
 				break;
 			default:
-				System.out.println("Unrecognized Command");
+				//Check for an arithmetic command
+				if (!arithmetic(command))
+					System.out.println("Unrecognized Command");
 				break;
 			}
 				
@@ -148,6 +138,38 @@ public class AsyncJokeClient {
 			ioe.printStackTrace();
 		}
 		
+	}
+	
+	static boolean arithmetic(String command) {
+		//Variable declaration
+		LinkedList<Integer> numbers = new LinkedList<Integer>();
+		
+		//TODO: Check for Arithmetic request.
+		String[] elements = command.split(" ");//Split command string by spaces
+		try {
+		
+		//Parse all the subdivided strings
+		for (int i = 0; i < elements.length; i++) {
+			numbers.add(Integer.parseInt(elements[i]));
+		}
+				
+		}catch(NumberFormatException nfe) {return false;}//If one of the arguments isn't a number return false. 
+
+		//Sum all the parsed numbers in the list
+		int sum = 0;
+		for (Integer nextNum: numbers) {
+			sum += nextNum;
+		}
+		
+		//Prompt the user
+		System.out.print("Your sum is: " + sum);
+		//Joke(s)
+		if (sum == 69) System.out.println("...Nice.");
+		else if (sum == 420) System.out.println(" Blaze zit.");
+		else System.out.println();
+		System.out.flush();
+		
+		return true;
 	}
 	
 	static void requestPhrase(String Server, int port, String username, BufferedWriter writer) {
@@ -185,10 +207,7 @@ public class AsyncJokeClient {
 		
 		try {
 			writer.write(line + '\n');
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		} catch (IOException e) {e.printStackTrace();}
 	}
 	
 }

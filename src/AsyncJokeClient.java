@@ -52,43 +52,39 @@ import java.util.Map;
 
 public class AsyncJokeClient {
 	
-	private static final int PRIMARY= 4545;
-	private static final int SECONDARY = 4546;
 	private static final String PROMPT= "Enter A or B to get a joke or proverb, or numbers for sum: ";
 	private static final String LOCATION = "localhost";
 	
 	public static void main (String args []) {
 		
 		//Variable
-		String primaryServer;
-		String secondServer;
 		Map<Character, Integer> servers = new Hashtable<Character, Integer>();
 		
 		//TODO: Change so that each argument presented is a port to listen on.
-		//Optionally acquire the host's & secondary hots's name if it was provided
-		if (args.length < 1) { // Default to using 1 connection local host
-			primaryServer = "localhost";
-			secondServer = null;
+		//Default single port
+		if (args.length < 1) {servers.put('A', 4545);}
+		//Additional ports
+		else {
+			//Assign a new ASCII character to each provided port #
+			int ascii = 65;
+			for (int i = 0; i < args.length; i++) {
+				try {
+					int port = Integer.parseInt(args[i]);
+					servers.put((char) ascii, port);					
+					ascii++;//increment ASCII
+				} catch (Exception e) {}
+			}
 		}
+		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.03 \n");
 		
-		else if (args.length < 2) { // Use provided argument for connection
-			primaryServer = args[0];
-			secondServer = null;
+		//Show user all parsed connections
+		for (Character c: servers.keySet()) {
+			output.append("Server ").append(c).append( " at ").append(servers.get(c)).append('\n');
 		}
-		else { // User provided 2 arguments for connections
-			primaryServer = args[0];
-			secondServer = args[1];
-		}
-		
-		//TODO: Listen on response ports that are 1000 higher than the request ports.
-		
-		//Console Prompts
-		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.03 \nServer One: " );
-		output.append(primaryServer).append(", port ").append(PRIMARY).append('\n');
-		if (secondServer != null) {output.append("Server Two: ").append(secondServer).append(", port ").append(SECONDARY);}
 		
 		System.out.println(output.toString());
-		System.out.flush();
+		
+		//TODO: Spawn listeners threads at all listed ports.
 		
 		//Read from the local console
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -114,16 +110,8 @@ public class AsyncJokeClient {
 			command = in.readLine().trim();//Read & sanitize inputs
 			System.out.println();
 			
-			//Parse commands
+			//TODO: Parse commands
 			switch(command.toUpperCase()) {
-			//Request phrase from primary
-			case "A":
-				requestPhrase(primaryServer, PRIMARY, user, writer);
-				break;
-			//Request phrase from secondary
-			case "B":
-				requestPhrase(secondServer, SECONDARY, user, writer);
-				break;
 			case "quit":
 				break;
 			default:

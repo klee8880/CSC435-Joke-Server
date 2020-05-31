@@ -67,18 +67,24 @@ class Phrase{
 }
 
 class Account{
+	static int portIndex = 6000;
+	
 	List <Phrase> jokes;
 	int jokeIndex = 0;
 	List <Phrase> proverbs;
 	int proverbIndex = 0;
+	int port; 
 	
 	public Account(Phrase[] jokeList, Phrase[] proverbList) {
 		super();
 		this.jokes = Arrays.asList(jokeList);
 		this.proverbs = Arrays.asList(proverbList);
-		
 		Collections.shuffle(this.jokes);
 		Collections.shuffle(this.proverbs);
+		
+		//Assign this account a port
+		port = portIndex;
+		portIndex++;
 	}
 	
 	public void resetJokes() {

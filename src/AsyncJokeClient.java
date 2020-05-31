@@ -53,6 +53,7 @@ public class AsyncJokeClient {
 	private static final int PRIMARY= 4545;
 	private static final int SECONDARY = 4546;
 	private static final String PROMPT= "Enter A or B to get a joke or proverb, or numbers for sum: ";
+	private static final String LOCATION = "localhost";
 	
 	public static void main (String args []) {
 		
@@ -60,6 +61,7 @@ public class AsyncJokeClient {
 		String primaryServer;
 		String secondServer;
 		
+		//TODO: Change so that each argument presented is a port to listen on.
 		//Optionally acquire the host's & secondary hots's name if it was provided
 		if (args.length < 1) { // Default to using 1 connection local host
 			primaryServer = "localhost";
@@ -75,7 +77,7 @@ public class AsyncJokeClient {
 			secondServer = args[1];
 		}
 		
-		//TODO: Start response thread/Make Response thread
+		//TODO: Listen on response ports that are 1000 higher than the request ports.
 		
 		//Console Prompts
 		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.03 \nServer One: " );
@@ -109,7 +111,7 @@ public class AsyncJokeClient {
 			command = in.readLine().trim();//Read & sanitize inputs
 			System.out.println();
 			
-			//TODO: Make better command Parser
+			//Parse commands
 			switch(command.toUpperCase()) {
 			//Request phrase from primary
 			case "A":

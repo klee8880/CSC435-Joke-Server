@@ -14,24 +14,24 @@ build 1.8.0_161
 
 In separate shell windows or computers:
 
-> java JokeServer (2)
-> java JokeClient
-> java JokeClientAdmin
+> java AsyncJokeServer (2)
+> java AsyncJokeClient
+> java AsyncJokeClientAdmin
 
 All acceptable commands are displayed on the various consoles.
 
 This runs across machines, in which case you have to pass the IP address of
-the server to the clients. For exmaple, if the server is running at
+the server to the clients. For example, if the server is running at
 140.192.1.22 then you would type:
 
-> java JokeClient 140.192.1.22
-> java JokeClientAdmin 140.192.1.22
+> java AsyncJokeClient 140.192.1.22
+> java AsyncJokeClientAdmin 140.192.1.22
 
 5. List of files needed for running the program.
 
- a. JokeServer.java
- b. JokeClient.java
- c. JokeClientAdmin.java
+ a. AsyncJokeServer.java
+ b. AsyncJokeClient.java
+ c. AsyncJokeClientAdmin.java
 
 5. Notes:
 
@@ -73,7 +73,7 @@ class Account{
 	int jokeIndex = 0;
 	List <Phrase> proverbs;
 	int proverbIndex = 0;
-	int port; 
+	int port; //Port # to listen on for this account. Would be better implemented as a connection pool.
 	
 	public Account(Phrase[] jokeList, Phrase[] proverbList) {
 		super();
@@ -231,8 +231,8 @@ class Speaker extends Thread {
 	
 	public static Phrase [] proverbList= {
 			new Phrase("PA", "A bird in the hand, is worth 2 in the bush."),
-			new Phrase("PB", "Look strong when you are weak, and weak when you are strong."),
-			new Phrase("PC", "If you know your enemy, and know yourself, you need not fear the result of a hundred battles"),
+			new Phrase("PB", "Look strong where you are weak, and weak where you are strong."),
+			new Phrase("PC", "True humility is the only antidote to shame."),
 			new Phrase("PD", "I know not which ways the wind will blow. Only how to set my sails.")
 	};
 	

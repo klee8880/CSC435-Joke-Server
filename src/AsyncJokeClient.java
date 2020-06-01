@@ -110,10 +110,9 @@ public class AsyncJokeClient {
 				port = getResponsePort(LOCATION, port, user);
 				
 				//Start a response thread.
+				System.out.println("New response on listener port " + port);
 				new ResponseListener(consoleLock, port, writer).start();
 			}
-			
-			//TODO: Spawn listening port connections.
 			
 			do {
 				//Semaphore lock console so 
@@ -166,19 +165,10 @@ public class AsyncJokeClient {
 		//Receive message.
 		String response;
 		
-		//Listen for a response.
-		for (int i = 0; i < 3; i++) {
-			response = fromStream.readLine();
-			if (response != null) {
-				sock.close();
-				return Integer.parseInt(response);
-			}
-		}
-		
-		//Close the connection.
-		sock.close();
-		
-		return -1;
+		//Listen for a response up to 3 times
+		response = fromStream.readLine();
+		sock.close();//Close the socket.
+		return Integer.parseInt(response);//Parse the integer
 		
 	}
 	

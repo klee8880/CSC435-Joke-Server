@@ -49,6 +49,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 class Phrase{
 	public String header;
@@ -131,7 +132,7 @@ class AccountList{
 	//Add an account to the map. Returns the account itself
 	public synchronized Account addAccount(String user, Phrase [] jokes, Phrase [] proverbs){
 		Account newAccount = new Account(jokes, proverbs);
-		accounts.put(user, newAccount);
+		accounts.put(user.toUpperCase(), newAccount);
 		return newAccount;
 	}
 	
@@ -273,7 +274,25 @@ class Speaker extends Thread {
 			}
 			else if (command.indexOf(AsyncJokeServer.PHRASETAG) > -1) {
 				System.out.println("Phrase Reqeusted...");
-				out.println(phraseRequest(command));
+				//Close the old socket.
+				in.close();
+				sock.close();
+				
+				String response = phraseRequest(command);
+				
+				//Respond on the new port#
+				String username = parseUserName(command, AsyncJokeServer.PHRASETAG);
+				int port = AsyncJokeServer.accounts.findAccount(username).port;// Get the saved port #
+				
+				//Aquire new socket connection.
+				sock = new Socket("localhost", port);
+				out = new PrintStream(sock.getOutputStream());
+				
+				TimeUnit.SECONDS.sleep(70	);//Wait for 70 seconds
+				
+				//Respond to response port.
+				System.out.println("Responding with: " + response);
+				out.println(response);
 			}
 			
 		}
@@ -316,7 +335,7 @@ class Speaker extends Thread {
 	
 	//Parse the user name out of a given request string and provided tag
 	private String parseUserName(String input, String tag) {
-		return input.substring(input.indexOf(tag), input.indexOf("]", input.indexOf(tag)));
+		return input.substring(input.indexOf(tag) + tag.length(), input.indexOf("]", input.indexOf(tag)));
 	}
 	
 }

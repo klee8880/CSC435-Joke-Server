@@ -51,14 +51,15 @@ import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 
 public class AsyncJokeClient {
 	
-	private static final String PROMPT= "Enter A, B, C, etc to get a joke or proverb, or numbers for sum: ";
-	private static final String LOCATION = "localhost";
-	private static final String PORTTAG = "[PortReqeust: ";
-	private static final String PHRASETAG = "[Phrase: ";
+	public static final String PROMPT= "Enter A, B, C, etc to get a joke or proverb, or numbers for sum: ";
+	public static final String LOCATION = "localhost";
+	public static final String PORTTAG = "[PortReqeust: ";
+	public static final String PHRASETAG = "[Phrase: ";
 	public static final Semaphore consoleLock = new Semaphore(1);
 	
 	public static void main (String args []) {
@@ -110,16 +111,17 @@ public class AsyncJokeClient {
 				port = getResponsePort(LOCATION, port, user);
 				
 				//Start a response thread.
-				System.out.println("New response on listener port " + port);
+				System.out.println("New response thread on listener port " + port);
 				new ResponseListener(consoleLock, port, writer).start();
 			}
+			
+			System.out.print(PROMPT);
 			
 			do {
 				//Semaphore lock console so 
 				consoleLock.acquire();
 				
 				//Request new Input
-				System.out.print(PROMPT);
 				command = in.readLine().trim();//Read & sanitize inputs
 				System.out.println();
 				
@@ -127,15 +129,20 @@ public class AsyncJokeClient {
 				Integer targetPort = servers.get(command);
 				if (targetPort != null) {
 					requestPhrase(LOCATION, targetPort, user);
+					System.out.print(PROMPT);
 				}
 				else if (!arithmetic(command)) { //Arithmetic request.
 					System.out.println("Unrecognized Command");
+					System.out.print(PROMPT);
 				}
+				else System.out.print(PROMPT);
 				
 				//Let any other requesting process proceed.
 				consoleLock.release();
 				
-			} while (command.indexOf("quit") < 0);
+				TimeUnit.SECONDS.sleep(5);
+				
+			} while (command.indexOf("QUIT") < 0);
 			
 			writer.close();
 			System.out.println("Local terminal stopped by user request.");
@@ -256,7 +263,6 @@ class ResponseListener extends Thread{
 			while (true) {
 				//Accept a new connection
 				sock = servsock.accept();
-				System.out.println("Admin connection accepted");
 				//Run program with the connection on a new thread.
 				new Printer(sock, consoleGate, writer).start();
 			}
@@ -283,18 +289,19 @@ class Printer extends Thread{
 		try {
 			
 			BufferedReader fromStream = new BufferedReader (new InputStreamReader(sock.getInputStream()));
-			consoleGate.acquire();
 			
 			//Read 2 line from the server
 			for (int i = 0; i < 2; i++) {
 				String result = fromStream.readLine();
 				if (result != null) {
-					System.out.println(result);
+					System.out.println("\nNow waiting for semaphore release.");
+					consoleGate.acquire();
+					System.out.println('\n' + result);
+					System.out.print(AsyncJokeClient.PROMPT);
 					writeFile(writer, result);
+					consoleGate.release();
 				}
 			}
-			
-			consoleGate.release();
 			
 		} catch (IOException | InterruptedException e) {e.printStackTrace();}
 	}

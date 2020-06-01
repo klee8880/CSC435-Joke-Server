@@ -46,11 +46,9 @@ import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 class Phrase{
 	public String header;
@@ -69,7 +67,7 @@ class Phrase{
 }
 
 class Account{
-	static int portIndex = 6000;
+	private static int portIndex = 6000;
 	
 	List <Phrase> jokes;
 	int jokeIndex = 0;
@@ -85,8 +83,7 @@ class Account{
 		Collections.shuffle(this.proverbs);
 		
 		//Assign this account a port
-		port = portIndex;
-		portIndex++;
+		port = portIndex++;
 	}
 	
 	public void resetJokes() {
@@ -140,7 +137,7 @@ class AccountList{
 	
 	//Look up account for user.
 	public synchronized Account findAccount(String user) {
-		Account result = accounts.get(user);
+		Account result = accounts.get(user.toUpperCase());
 		return result;
 	}
 }
@@ -252,7 +249,8 @@ class Speaker extends Thread {
 		this.sock = socketPassed;
 		this.parent = parent;
 	}
-
+	
+	@Override
 	public void run() {
 		
 		BufferedReader in = null;
@@ -265,17 +263,17 @@ class Speaker extends Thread {
 			out = new PrintStream(sock.getOutputStream());
 			
 			//Prompt for a User Name
-			command = in.readLine().toUpperCase();
-			
-			//Close the socket
-			sock.close();
+			command = in.readLine();
+			System.out.println(command);
 			
 			//Detect type of command
 			if (command.indexOf(AsyncJokeServer.PORTTAG) > -1) {
-				out.println(phraseRequest(command));
+				System.out.println("Port Reqeusted...");
+				out.println(portRequest(command));
 			}
 			else if (command.indexOf(AsyncJokeServer.PHRASETAG) > -1) {
-				out.println(portRequest(command));
+				System.out.println("Phrase Reqeusted...");
+				out.println(phraseRequest(command));
 			}
 			
 		}

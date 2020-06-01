@@ -44,25 +44,29 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 
 public class AsyncJokeClient {
 	
-	private static final String PROMPT= "Enter A or B to get a joke or proverb, or numbers for sum: ";
+	private static final String PROMPT= "Enter A, B, C, etc to get a joke or proverb, or numbers for sum: ";
 	private static final String LOCATION = "localhost";
+	private static final String PORTTAG = "[PortReqeust: ";
+	private static final String PHRASETAG = "[Phrase: ";
+	public static final Semaphore consoleLock = new Semaphore(1);
 	
 	public static void main (String args []) {
-		
 		//Variable
-		Map<Character, Integer> servers = new Hashtable<Character, Integer>();
+		Map<String, Integer> servers = new Hashtable<String, Integer>();
 		
-		//TODO: Change so that each argument presented is a port to listen on.
 		//Default single port
-		if (args.length < 1) {servers.put('A', 4545);}
+		if (args.length < 1) {servers.put("A", 4545);}
 		//Additional ports
 		else {
 			//Assign a new ASCII character to each provided port #
@@ -70,21 +74,20 @@ public class AsyncJokeClient {
 			for (int i = 0; i < args.length; i++) {
 				try {
 					int port = Integer.parseInt(args[i]);
-					servers.put((char) ascii, port);					
+					servers.put("" + (char) ascii, port);					
 					ascii++;//increment ASCII
 				} catch (Exception e) {}
 			}
 		}
-		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v.03 \n");
+		StringBuilder output = new StringBuilder("Kevin Lee's Joke Client, v1.2 \n");
 		
-		//Show user all parsed connections
-		for (Character c: servers.keySet()) {
+		//Perform operations needed for all known processes
+		for (String c: servers.keySet()) {
+			//Add to the user prompt
 			output.append("Server ").append(c).append( " at ").append(servers.get(c)).append('\n');
 		}
 		
 		System.out.println(output.toString());
-		
-		//TODO: Spawn listeners threads at all listed ports.
 		
 		//Read from the local console
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -100,44 +103,93 @@ public class AsyncJokeClient {
 			//Open a file for the user
 			BufferedWriter writer = new BufferedWriter(new FileWriter(user + ".txt"));
 			
-			//Communicate with the console
-			System.out.println(PROMPT);
+			//TODO: Acquire all response ports
+			for (String c: servers.keySet()) {
+				//Get the response port from server
+				int port = servers.get(c);
+				port = getResponsePort(LOCATION, port, user);
+				
+				//Start a response thread.
+				new ResponseListener(consoleLock, port, writer).start();
+			}
+			
+			//TODO: Spawn listening port connections.
 			
 			do {
-			
-			//Request new Input
-			System.out.print("Command: ");
-			command = in.readLine().trim();//Read & sanitize inputs
-			System.out.println();
-			
-			//TODO: Parse commands
-			switch(command.toUpperCase()) {
-			case "quit":
-				break;
-			default:
-				//Check for an arithmetic command
-				if (!arithmetic(command))
+				//Semaphore lock console so 
+				consoleLock.acquire();
+				
+				//Request new Input
+				System.out.print(PROMPT);
+				command = in.readLine().trim();//Read & sanitize inputs
+				System.out.println();
+				
+				//Parse commands
+				Integer targetPort = servers.get(command);
+				if (targetPort != null) {
+					requestPhrase(LOCATION, targetPort, user);
+				}
+				else if (!arithmetic(command)) { //Arithmetic request.
 					System.out.println("Unrecognized Command");
-				break;
-			}
+				}
+				
+				//Let any other requesting process proceed.
+				consoleLock.release();
 				
 			} while (command.indexOf("quit") < 0);
 			
 			writer.close();
 			System.out.println("Local terminal stopped by user request.");
 			
-		}catch (IOException ioe) {
-			//Print error code stack trace to the console.
-			ioe.printStackTrace();
-		}
+		}catch (IOException | InterruptedException ioe) {ioe.printStackTrace();}
 		
 	}
 	
+	/**Send message to the Joke Server requesting the response port
+	 * @param location
+	 * @param port
+	 * @param username
+	 * @return response port #
+	 * @throws UnknownHostException
+	 * @throws IOException
+	 */
+	static int getResponsePort(String location, int port, String username) throws UnknownHostException, IOException {
+
+		//Initialize variables
+		Socket sock = new Socket(location, port);
+		PrintStream toStream = new PrintStream(sock.getOutputStream());
+		BufferedReader fromStream = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+		
+		//Send message to the server
+		toStream.println(PORTTAG + username + ']');
+		
+		//Receive message.
+		String response;
+		
+		//Listen for a response.
+		for (int i = 0; i < 3; i++) {
+			response = fromStream.readLine();
+			if (response != null) {
+				sock.close();
+				return Integer.parseInt(response);
+			}
+		}
+		
+		//Close the connection.
+		sock.close();
+		
+		return -1;
+		
+	}
+	
+	/**Take the string and subdivide it into numbers. Returns the sum of each element potentially with comments
+	 * @param command
+	 * @return
+	 */
 	static boolean arithmetic(String command) {
 		//Variable declaration
 		LinkedList<Integer> numbers = new LinkedList<Integer>();
 		
-		//TODO: Check for Arithmetic request.
 		String[] elements = command.split(" ");//Split command string by spaces
 		try {
 		
@@ -157,30 +209,92 @@ public class AsyncJokeClient {
 		//Prompt the user
 		System.out.print("Your sum is: " + sum);
 		//Joke(s)
-		if (sum == 69) System.out.println("...Nice.");
-		else if (sum == 420) System.out.println(" Blaze zit.");
+		if (sum == 69) System.out.println("... Nice.");
+		else if (sum == 420) System.out.println(" Blaze it.");
 		else System.out.println();
 		System.out.flush();
 		
 		return true;
 	}
 	
-	static void requestPhrase(String Server, int port, String username, BufferedWriter writer) {
+	static void requestPhrase(String Server, int port, String username) {
 		
 		Socket sock;
-		BufferedReader fromStream;
 		PrintStream toStream;
 		
 		try {
 			
 			//Acquire connection
 			sock = new Socket(Server, port);
-			fromStream = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 			toStream = new PrintStream(sock.getOutputStream());
 			
 			//Send request to the server with the user name.
-			toStream.println(username);
+			toStream.println(PHRASETAG + username + ']');
+			
+			//Close the connection
+			sock.close();
 
+		} catch (IOException ioe) {ioe.printStackTrace();}
+		
+	}
+	
+}
+
+class ResponseListener extends Thread{
+	Semaphore consoleGate;
+	int port;
+	BufferedWriter writer;
+	private static final int queueLength = 6;
+	
+	public ResponseListener(Semaphore consoleGate, int port, BufferedWriter writer) {
+		super();
+		this.consoleGate = consoleGate;
+		this.port = port;
+		this.writer = writer;
+	}
+
+	@Override
+	public void run(){
+		Socket sock;
+		
+		try {
+			//Open sockets
+			@SuppressWarnings("resource")
+			ServerSocket servsock = new ServerSocket (port, queueLength);
+			
+			//Listen in a loop
+			while (true) {
+				//Accept a new connection
+				sock = servsock.accept();
+				System.out.println("Admin connection accepted");
+				//Run program with the connection on a new thread.
+				new Printer(sock, consoleGate, writer).start();
+			}
+		} catch (IOException e) {e.printStackTrace();}
+		
+	}
+}
+
+class Printer extends Thread{
+	Socket sock;
+	Semaphore consoleGate;
+	BufferedWriter writer;
+	
+	//Constructor
+	public Printer(Socket sock, Semaphore consoleGate, BufferedWriter writer) {
+		super();
+		this.sock = sock;
+		this.consoleGate = consoleGate;
+		this.writer = writer;
+	}
+
+	@Override
+	public void run() {
+		try {
+			
+			BufferedReader fromStream = new BufferedReader (new InputStreamReader(sock.getInputStream()));
+			consoleGate.acquire();
+			
 			//Read 2 line from the server
 			for (int i = 0; i < 2; i++) {
 				String result = fromStream.readLine();
@@ -189,12 +303,12 @@ public class AsyncJokeClient {
 					writeFile(writer, result);
 				}
 			}
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
-		
+			
+			consoleGate.release();
+			
+		} catch (IOException | InterruptedException e) {e.printStackTrace();}
 	}
-
+	
 	//Write server result to a file for audit
 	static synchronized void writeFile(BufferedWriter writer, String line) {
 		
@@ -202,5 +316,4 @@ public class AsyncJokeClient {
 			writer.write(line + '\n');
 		} catch (IOException e) {e.printStackTrace();}
 	}
-	
 }
